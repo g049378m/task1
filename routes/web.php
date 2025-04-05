@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PizzaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,6 +18,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+Route::get('/pizza/create', [PizzaController::class, 'create'])->name('pizza.create');
+Route::post('/pizza', [PizzaController::class, 'store'])->name('pizza.store');
+Route::get('/pizzas', [PizzaController::class, 'index'])->name('pizzas.index');
 
 Route::get('/dashboard', function () {
     return view('dashboard');
