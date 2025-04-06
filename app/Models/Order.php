@@ -30,4 +30,11 @@ class Order extends Model
         return $this->belongsToMany(Pizza::class)->withPivot('quantity')->withTimestamps();
     }
 
+    public function toppings()
+    {
+        return $this->belongsToMany(Topping::class, 'order_pizza_topping')
+                    ->withPivot('pizza_id', 'is_extra')
+                    ->withTimestamps();
+    }
+
 }

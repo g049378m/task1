@@ -12,11 +12,19 @@
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
+                   
+                    <x-nav-link :href="route('pizzas.index')" :active="request()->routeIs('pizzas.index')">
+                        {{ __('Pizzas') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('toppings.index')" :active="request()->routeIs('toppings.index')">
+                        {{ __('Toppings') }}
+                    </x-nav-link>
+                    @auth
+                        <x-nav-link :href="route('orders.create')" :active="request()->routeIs('orders.create')">
+                            {{ __('New Order') }}
+                        </x-nav-link>
+                    @endauth
                 </div>
-            </div>
 
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6">

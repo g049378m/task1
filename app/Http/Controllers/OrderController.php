@@ -6,7 +6,8 @@ use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Pizza;
-
+use Illuminate\Support\Facades\DB;
+use App\Models\Topping;
 
 class OrderController extends Controller
 {
@@ -82,6 +83,85 @@ class OrderController extends Controller
 
         return redirect()->route('orders.show', $order)->with('success', 'Pizzas added to your order.');
     }
+
+    public function customisePizzaForm(Order $order, Pizza $pizza)
+    {
+        $this->authorize('update', $order);
+
+        $availableToppings = Topping::all();
+
+        $selectedToppings = $pizza->toppingsInOrder($order->id)
+                                ->pluck('toppings.id') // 👈 important!
+                                ->toArray();
+
+        $extraToppings = $pizza->toppingsInOrder($order->id)
+                            ->wherePivot('is_extra', true)
+                            ->pluck('toppings.id')
+                            ->toArray();
+
+        return view('orders.customise-pizza', compact('order', 'pizza', 'availableToppings', 'selectedToppings', 'extraToppings'));
+    }
+
+    
+
+    public function saveCustomisation(Request $request, Order $order, Pizza $pizza)
+    {
+        $this->authorize('update', $order);
+    
+        $toppingIds = $request->input('toppings', []);
+    
+        // Detach current toppings for this order and pizza
+        \DB::table('order_pizza_topping')
+            ->where('order_id', $order->id)
+            ->where('pizza_id', $pizza->id)
+            ->delete();
+    
+        // Get the default toppings for this pizza
+        $defaultToppings = $pizza->toppings()->pluck('toppings.id')->toArray();
+    
+        foreach ($toppingIds as $toppingId) {
+            $isExtra = !in_array($toppingId, $defaultToppings);
+    
+            \DB::table('order_pizza_topping')->insert([
+                'order_id' => $order->id,
+                'pizza_id' => $pizza->id,
+                'topping_id' => $toppingId,
+                'is_extra' => $isExtra,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+    
+        // Recalculate the total
+        $this->recalculateTotal($order);
+    
+        return redirect()->route('orders.show', $order)->with('success', 'Toppings updated!');
+    }
+    
+    private function recalculateTotal(Order $order)
+{
+    $baseTotal = 0;
+    $extraToppingCount = 0;
+
+    foreach ($order->pizzas as $pizza) {
+        // Basic price – assume medium size
+        $baseTotal += $pizza->medium_price * $pizza->pivot->quantity;
+
+        // Count extra toppings
+        $extras = $pizza->toppingsInOrder($order->id)
+                    ->wherePivot('is_extra', true)
+                    ->count();
+
+        $extraToppingCount += $extras * $pizza->pivot->quantity;
+    }
+
+    $total = $baseTotal + ($extraToppingCount * 0.85) + $order->delivery_charge;
+
+    $order->update(['total' => $total]);
+}
+
+
+
 
     /**
      * Show the form for editing the specified resource.

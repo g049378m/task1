@@ -1,31 +1,31 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Add Pizzas to Order') }}
+            Add Pizzas to Order #{{ $order->id }}
         </h2>
     </x-slot>
 
-    <div class="py-6 max-w-3xl mx-auto">
-        <form method="POST" action="{{ route('orders.addPizzas', $order) }}">
+    <div class="py-12 max-w-4xl mx-auto">
+        <form action="{{ route('orders.addPizzas', $order) }}" method="POST" class="space-y-6">
             @csrf
 
-            <div class="space-y-4">
-                @foreach ($pizzas as $pizza)
-                    <div class="border p-4 rounded-md shadow-sm">
-                        <h3 class="font-bold text-lg">{{ $pizza->name }}</h3>
-                        <p class="text-sm text-gray-600">{{ $pizza->description ?? 'No description.' }}</p>
-                        <p class="text-sm text-gray-700 mb-2">
-                            Small £{{ $pizza->small_price }}, Medium £{{ $pizza->medium_price }}, Large £{{ $pizza->large_price }}
-                        </p>
-                        <label for="pizza_{{ $pizza->id }}" class="block text-sm font-medium text-gray-700">Quantity:</label>
-                        <input type="number" name="pizzas[{{ $pizza->id }}]" id="pizza_{{ $pizza->id }}" min="0" class="mt-1 block w-20 border-gray-300 rounded-md shadow-sm">
-                    </div>
-                @endforeach
-            </div>
+            @foreach ($pizzas as $pizza)
+                <div class="border p-4 rounded shadow">
+                    <h3 class="text-lg font-bold">{{ $pizza->name }}</h3>
+                    <p class="text-sm mb-1">{{ $pizza->description }}</p>
+                    <p class="text-sm">
+                        Small £{{ number_format($pizza->small_price, 2) }},
+                        Medium £{{ number_format($pizza->medium_price, 2) }},
+                        Large £{{ number_format($pizza->large_price, 2) }}
+                    </p>
+                    <label for="pizza_{{ $pizza->id }}" class="block mt-2">
+                        Quantity:
+                        <input type="number" min="0" name="pizzas[{{ $pizza->id }}]" id="pizza_{{ $pizza->id }}" class="border rounded px-2 py-1 w-20">
+                    </label>
+                </div>
+            @endforeach
 
-            <div class="mt-6">
-                <x-primary-button>Add to Order</x-primary-button>
-            </div>
+            <x-primary-button>Add to Order</x-primary-button>
         </form>
     </div>
 </x-app-layout>
