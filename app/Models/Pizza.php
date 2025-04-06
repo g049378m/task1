@@ -24,17 +24,18 @@ class Pizza extends Model
 
     public function toppings()
     {
-        return $this->belongsToMany(Topping::class)->withTimestamps();
+        return $this->belongsToMany(Topping::class, 'pizza_topping')->withTimestamps();
     }
+    
 
-   public function toppingsInOrder($orderId)
+    public function toppingsInOrder($orderId)
     {
         return $this->belongsToMany(Topping::class, 'order_pizza_topping')
                     ->wherePivot('order_id', $orderId)
                     ->withPivot('is_extra')
                     ->withTimestamps();
     }
-
+    
 
 }
 

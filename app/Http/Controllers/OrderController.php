@@ -74,33 +74,46 @@ class OrderController extends Controller
     {
         $this->authorize('update', $order);
 
-        $data = $request->input('pizzas', []);
-        foreach ($data as $pizzaId => $quantity) {
+        foreach ($request->input('pizzas', []) as $pizzaId => $quantity) {
             if ((int) $quantity > 0) {
+              
                 $order->pizzas()->attach($pizzaId, ['quantity' => $quantity]);
+
+              
+                $pizza = Pizza::find($pizzaId);
+                $baseToppingIds = $pizza->toppings()->pluck('toppings.id')->toArray();
+
+                foreach ($baseToppingIds as $toppingId) {
+                    \DB::table('order_pizza_topping')->insert([
+                        'order_id'   => $order->id,
+                        'pizza_id'   => $pizzaId,
+                        'topping_id' => $toppingId,
+                        'is_extra'   => false, 
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
         }
 
         return redirect()->route('orders.show', $order)->with('success', 'Pizzas added to your order.');
     }
 
+
     public function customisePizzaForm(Order $order, Pizza $pizza)
     {
         $this->authorize('update', $order);
-
+    
         $availableToppings = Topping::all();
-
-        $selectedToppings = $pizza->toppingsInOrder($order->id)
-                                ->pluck('toppings.id') // 👈 important!
-                                ->toArray();
-
-        $extraToppings = $pizza->toppingsInOrder($order->id)
-                            ->wherePivot('is_extra', true)
-                            ->pluck('toppings.id')
-                            ->toArray();
-
+    
+        $toppingsInOrder = $pizza->toppingsInOrder($order->id)->get(); // ← Important!
+    
+        $selectedToppings = $toppingsInOrder->pluck('id')->toArray();
+        $extraToppings = $toppingsInOrder->filter(fn($t) => $t->pivot->is_extra)->pluck('id')->toArray();
+    
         return view('orders.customise-pizza', compact('order', 'pizza', 'availableToppings', 'selectedToppings', 'extraToppings'));
     }
+    
 
     
 
