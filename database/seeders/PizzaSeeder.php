@@ -11,23 +11,35 @@ class PizzaSeeder extends Seeder
     {
         Pizza::create([
             'name' => 'Margherita',
-            'small_price' => 6.99,
-            'medium_price' => 8.99,
-            'large_price' => 10.99,
+            'description' => 'Cheese, tomato sauce',
+            'small_price' => 8,
+            'medium_price' => 9,
+            'large_price' => 12,
         ]);
 
         Pizza::create([
             'name' => 'Meat Feast',
-            'small_price' => 8.99,
-            'medium_price' => 11.99,
-            'large_price' => 14.99,
+            'description' => 'Pepperoni, ham, chicken, minced beef, sausage, bacon',
+            'small_price' => 11,
+            'medium_price' => 14.50,
+            'large_price' => 16.50,
         ]);
 
         Pizza::create([
             'name' => 'Veggie Deluxe',
-            'small_price' => 7.49,
-            'medium_price' => 9.99,
-            'large_price' => 12.99,
+            'description' => 'Peppers, onions, mushrooms, olives, sweetcorn',
+            'small_price' => 10,
+            'medium_price' => 13,
+            'large_price' => 15,
+        ]);
+
+
+        Pizza::create([
+            'name' => 'Make Mine Hot',
+            'description' => 'Chicken, onions, green peppers, jalapeno peppers',
+            'small_price' => 11,
+            'medium_price' => 13,
+            'large_price' => 15,
         ]);
     }
 }

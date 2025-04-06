@@ -16,5 +16,11 @@ class Pizza extends Model
         'medium_price',
         'large_price',
     ];
+
+    public function orders()
+    {
+        return $this->belongsToMany(Order::class)->withPivot('quantity')->withTimestamps();
+    }
+
 }
 
