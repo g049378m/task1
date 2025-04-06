@@ -3,6 +3,8 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PizzaController;
+use App\Http\Controllers\ToppingController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -21,6 +23,8 @@ Route::get('/', function () {
 Route::get('/pizza/create', [PizzaController::class, 'create'])->name('pizza.create');
 Route::post('/pizza', [PizzaController::class, 'store'])->name('pizza.store');
 Route::get('/pizzas', [PizzaController::class, 'index'])->name('pizzas.index');
+Route::get('/toppings', [ToppingController::class, 'index'])->name('toppings.index');
+
 
 Route::get('/dashboard', function () {
     return view('dashboard');
