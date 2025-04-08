@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="text-lg font-semibold leading-tight text-gray-800">
+        <h2 class="text-lg font-semibold text-gray-800 leading-tight">
             Order #{{ $order->id }} Details
         </h2>
     </x-slot>
@@ -8,7 +8,7 @@
     <div class="py-6">
         <div class="max-w-4xl mx-auto px-4 space-y-6">
 
-            <!-- Add Pizza Button (right aligned) -->
+            <!-- Add Pizza Button -->
             <div class="flex justify-end">
                 <a href="{{ route('orders.addPizzasForm', $order) }}" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
                     ➕ Add Pizzas to Order
@@ -23,70 +23,64 @@
             </div>
 
             <!-- Pizza List -->
-<div class="bg-white p-4 rounded shadow">
-    <h3 class="font-semibold mb-2">Pizzas</h3>
+            <div class="bg-white p-4 rounded shadow">
+                <h3 class="font-semibold mb-2">Pizzas</h3>
 
-    @forelse ($order->pizzas as $pizza)
-        <div class="mb-4 border-b pb-2">
-            <div class="flex justify-between items-center">
-                <p><strong>{{ $pizza->name }}</strong> x {{ $pizza->pivot->quantity }}</p>
+                @forelse ($order->orderPizzas as $orderPizza)
+                
+                @php
+                        $pizza = $orderPizza->pizza;
+                        $toppings = $orderPizza->toppings;                      
 
-                <a href="{{ route('orders.customisePizzaForm', [$order, $pizza]) }}"
-                   class="text-sm bg-gray-200 hover:bg-gray-300 text-black px-2 py-1 rounded">
-                    Customise
-                </a>
+
+                        // ✅ Cast is_extra to (int) to ensure accuracy
+                        $baseToppings = $toppings->filter(fn($t) => (int)($t->pivot->is_extra ?? 0) === 0)->pluck('name')->toArray(); // ✅ handles nulls & booleans
+                        $extraToppings = $toppings->filter(fn($t) => (int)($t->pivot->is_extra ?? 0) === 1)->pluck('name')->toArray(); // ✅ safer casting
+
+
+                        $sizePrice = $pizza[$orderPizza->size . '_price'] ?? 0;
+                        $extraCount = count($extraToppings);
+                        $itemTotal = $sizePrice + ($extraCount * 0.85); // ✅ Add extra topping cost
+                    @endphp
+
+                    <div class="mb-4 border-b pb-3">
+                        <div class="flex justify-between items-center">
+                            <p><strong>{{ $pizza->name }}</strong> ({{ ucfirst($orderPizza->size) }})</p>
+                            <a href="{{ route('orders.customisePizzaForm', [$order, $orderPizza]) }}"
+                               class="text-sm bg-gray-200 hover:bg-gray-300 text-black px-2 py-1 rounded">
+                                Customise
+                            </a>
+                        </div>
+
+                        @if (!empty($baseToppings))
+                            <p class="text-sm text-gray-600">Base Toppings: {{ implode(', ', $baseToppings) }}</p>
+                        @endif
+
+                        @if (!empty($extraToppings))
+                            <p class="text-sm text-gray-600">Extra Toppings (85p): {{ implode(', ', $extraToppings) }}</p>
+                        @endif
+
+                        <p class="text-sm font-semibold mt-1">Item Total: £{{ number_format($itemTotal, 2) }}</p>
+                    </div>
+                @empty
+                    <p>No pizzas in this order yet.</p>
+                @endforelse
             </div>
 
-            @php
-                $toppings = $pizza->toppingsInOrder($order->id)->get(); 
-                $baseToppings = $toppings->filter(fn($t) => !$t->pivot->is_extra)->pluck('name')->toArray(); 
-                $extraToppings = $toppings->filter(fn($t) => $t->pivot->is_extra)->pluck('name')->toArray(); 
-
-
-                $basePrice = $pizza->medium_price; 
-                $extraCount = count($extraToppings);
-                $pizzaTotal = ($basePrice + ($extraCount * 0.85)) * $pizza->pivot->quantity;
-            @endphp
-
-            @if (!empty($baseToppings))
-                <p class="text-sm text-gray-600">Base Toppings: {{ implode(', ', $baseToppings) }}</p>
-            @endif
-
-            @if (!empty($extraToppings))
-                <p class="text-sm text-gray-600">Extra Toppings (85p): {{ implode(', ', $extraToppings) }}</p>
-            @endif
-
-            <p class="text-sm text-gray-800 mt-1 font-semibold">Total: £{{ number_format($pizzaTotal, 2) }}</p>
-        </div>
-    @empty
-        <p>No pizzas in this order yet.</p>
-    @endforelse
-</div>
-
-            <!-- Total Summary -->
+            <!-- Grand Total -->
             <div class="bg-white p-4 rounded shadow">
                 <h3 class="font-semibold mb-2">Total</h3>
-
                 @php
-                    $total = $order->delivery_charge;
-
-                    foreach ($order->pizzas as $pizza) {
-                        $quantity = $pizza->pivot->quantity;
-                        $basePrice = $pizza->medium_price;
-
-                        
-
-                        $toppings = $pizza->toppingsInOrder($order->id)->get(); 
-                        $extraCount = $toppings->filter(fn($t) => $t->pivot->is_extra)->count(); 
-
-                        
-                        $total += ($basePrice + ($extraCount * 0.85)) * $quantity;
+                    $grandTotal = $order->delivery_charge;
+                    foreach ($order->orderPizzas as $orderPizza) {
+                        $pizza = $orderPizza->pizza;
+                        $basePrice = $pizza[$orderPizza->size . '_price'] ?? 0;
+                        $extraCount = $orderPizza->toppings->filter(fn($t) => (int)$t->pivot->is_extra === 1)->count(); // ✅ cast is_extra
+                        $grandTotal += $basePrice + ($extraCount * 0.85); // ✅ include extra topping charge
                     }
                 @endphp
-
-                <p><strong>Grand Total:</strong> £{{ number_format($total, 2) }}</p>
+                <p><strong>Grand Total:</strong> £{{ number_format($grandTotal, 2) }}</p>
             </div>
-
         </div>
     </div>
 </x-app-layout>

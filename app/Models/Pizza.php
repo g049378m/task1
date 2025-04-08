@@ -17,25 +17,25 @@ class Pizza extends Model
         'large_price',
     ];
 
-    public function orders()
+    // Relationship to the order_pizzas pivot model
+    public function orderPizzas()
     {
-        return $this->belongsToMany(Order::class)->withPivot('quantity')->withTimestamps();
+        return $this->hasMany(OrderPizza::class); // One Pizza type has many individual instances in orders
     }
 
+    // Relationship for default/base toppings defined for this pizza type
     public function toppings()
     {
         return $this->belongsToMany(Topping::class, 'pizza_topping')->withTimestamps();
     }
-    
 
-    public function toppingsInOrder($orderId)
+    // Fetch toppings related to a specific pizza in a specific order (using order_pizza_topping table)
+    public function toppingsInOrder($orderId, $pizzaRowId)
     {
         return $this->belongsToMany(Topping::class, 'order_pizza_topping')
                     ->wherePivot('order_id', $orderId)
+                    ->wherePivot('pizza_row_id', $pizzaRowId) // <-- new key to distinguish identical pizzas
                     ->withPivot('is_extra')
                     ->withTimestamps();
     }
-    
-
 }
-

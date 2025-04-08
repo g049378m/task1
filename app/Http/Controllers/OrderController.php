@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Pizza;
 use Illuminate\Support\Facades\DB;
 use App\Models\Topping;
+use App\Models\OrderPizza;
 
 class OrderController extends Controller
 {
@@ -70,108 +71,121 @@ class OrderController extends Controller
     /**
      * Seçili pizzaları siparişte tutmak icin gerekli fonksiyon
      */
+    
+     public function customisePizzaForm(Order $order, \App\Models\OrderPizza $orderPizza)
+     {
+         $this->authorize('update', $order);
+     
+         $availableToppings = Topping::all();
+     
+         $selectedToppings = $orderPizza->toppings->pluck('id')->toArray();
+         $extraToppings = $orderPizza->toppings->filter(fn($t) => $t->pivot->is_extra)->pluck('id')->toArray();
+     
+         return view('orders.customise-pizza', compact('order', 'orderPizza', 'availableToppings', 'selectedToppings', 'extraToppings'));
+     }
+     
+    
     public function addPizzas(Request $request, Order $order)
     {
         $this->authorize('update', $order);
-
-        foreach ($request->input('pizzas', []) as $pizzaId => $quantity) {
-            if ((int) $quantity > 0) {
-              
-                $order->pizzas()->attach($pizzaId, ['quantity' => $quantity]);
-
-              
-                $pizza = Pizza::find($pizzaId);
-                $baseToppingIds = $pizza->toppings()->pluck('toppings.id')->toArray();
-
-                foreach ($baseToppingIds as $toppingId) {
-                    \DB::table('order_pizza_topping')->insert([
-                        'order_id'   => $order->id,
-                        'pizza_id'   => $pizzaId,
-                        'topping_id' => $toppingId,
-                        'is_extra'   => false, 
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
+    
+        foreach ($request->input('pizzas', []) as $pizzaId => $data) {
+            if (!isset($data['size'])) {
+                continue;
+            }
+    
+            $pizza = Pizza::findOrFail($pizzaId);
+            $size = $data['size'];
+    
+            $orderPizza = \App\Models\OrderPizza::create([
+                'order_id' => $order->id,
+                'pizza_id' => $pizzaId,
+                'size' => $size,
+            ]);
+    
+            $baseToppingIds = $pizza->toppings()->pluck('toppings.id')->toArray();
+    
+            foreach ($baseToppingIds as $toppingId) {
+                \DB::table('order_pizza_topping')->insert([
+                    'order_id'     => $order->id,
+                    'pizza_id'     => $pizzaId,
+                    'pizza_row_id' => $orderPizza->id, 
+                    'topping_id'   => $toppingId,
+                    'is_extra'     => false,
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
+                ]);
             }
         }
 
+        $this->recalculateTotal($order);
+
+    
         return redirect()->route('orders.show', $order)->with('success', 'Pizzas added to your order.');
     }
-
-
-    public function customisePizzaForm(Order $order, Pizza $pizza)
-    {
-        $this->authorize('update', $order);
     
-        $availableToppings = Topping::all();
-    
-        $toppingsInOrder = $pizza->toppingsInOrder($order->id)->get(); // ← Important!
-    
-        $selectedToppings = $toppingsInOrder->pluck('id')->toArray();
-        $extraToppings = $toppingsInOrder->filter(fn($t) => $t->pivot->is_extra)->pluck('id')->toArray();
-    
-        return view('orders.customise-pizza', compact('order', 'pizza', 'availableToppings', 'selectedToppings', 'extraToppings'));
-    }
     
 
-    
-
-    public function saveCustomisation(Request $request, Order $order, Pizza $pizza)
-    {
-        $this->authorize('update', $order);
-    
-        $toppingIds = $request->input('toppings', []);
-    
-        // Detach current toppings for this order and pizza
-        \DB::table('order_pizza_topping')
-            ->where('order_id', $order->id)
-            ->where('pizza_id', $pizza->id)
-            ->delete();
-    
-        // Get the default toppings for this pizza
-        $defaultToppings = $pizza->toppings()->pluck('toppings.id')->toArray();
-    
-        foreach ($toppingIds as $toppingId) {
-            $isExtra = !in_array($toppingId, $defaultToppings);
-    
-            \DB::table('order_pizza_topping')->insert([
-                'order_id' => $order->id,
-                'pizza_id' => $pizza->id,
-                'topping_id' => $toppingId,
-                'is_extra' => $isExtra,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-    
-        // Recalculate the total
-        $this->recalculateTotal($order);
-    
-        return redirect()->route('orders.show', $order)->with('success', 'Toppings updated!');
-    }
-    
-    private function recalculateTotal(Order $order)
+    public function saveCustomisation(Request $request, Order $order, OrderPizza $orderPizza)
 {
-    $baseTotal = 0;
-    $extraToppingCount = 0;
+    $this->authorize('update', $order);
 
-    foreach ($order->pizzas as $pizza) {
-        // Basic price – assume medium size
-        $baseTotal += $pizza->medium_price * $pizza->pivot->quantity;
+    \DB::table('order_pizza_topping')
+        ->where('order_id', $order->id)
+        ->where('pizza_id', $orderPizza->pizza_id)
+        ->where('pizza_row_id', $orderPizza->id)
+        ->delete();
 
-        // Count extra toppings
-        $extras = $pizza->toppingsInOrder($order->id)
-                    ->wherePivot('is_extra', true)
-                    ->count();
+    $selectedToppings = $request->input('toppings', []);
 
-        $extraToppingCount += $extras * $pizza->pivot->quantity;
+    // 🧠 Get original base toppings from the Pizza model
+    $baseToppingIds = $orderPizza->pizza->toppings->pluck('id')->toArray();
+
+    foreach ($selectedToppings as $toppingId) {
+        \DB::table('order_pizza_topping')->insert([
+            'order_id'      => $order->id,
+            'pizza_id'      => $orderPizza->pizza_id,
+            'pizza_row_id'  => $orderPizza->id,
+            'topping_id'    => $toppingId,
+            'is_extra'      => !in_array((int)$toppingId, $baseToppingIds), // ✅ Calculate properly
+            'created_at'    => now(),
+            'updated_at'    => now(),
+        ]);
     }
 
-    $total = $baseTotal + ($extraToppingCount * 0.85) + $order->delivery_charge;
+    $this->recalculateTotal($order);
 
-    $order->update(['total' => $total]);
+    return redirect()->route('orders.show', $order)->with('success', 'Pizza customisation updated.');
 }
+
+    private function recalculateTotal(Order $order)
+    {
+        $baseTotal = 0;
+        $extraToppingCount = 0;
+
+        foreach ($order->orderPizzas as $orderPizza) {
+            $pizza = $orderPizza->pizza;
+
+            // Select correct size price
+            $size = $orderPizza->size;
+            $basePrice = match ($size) {
+                'small' => $pizza->small_price,
+                'medium' => $pizza->medium_price,
+                'large' => $pizza->large_price,
+                default => $pizza->medium_price,
+            };
+
+            $baseTotal += $basePrice;
+
+            // Count extra toppings for this specific pizza row
+            $extraToppings = $orderPizza->toppings->filter(fn($t) => $t->pivot->is_extra)->count();
+            $extraToppingCount += $extraToppings;
+        }
+
+        $total = $baseTotal + ($extraToppingCount * 0.85) + $order->delivery_charge;
+
+        $order->update(['total' => $total]);
+    }
 
 
 

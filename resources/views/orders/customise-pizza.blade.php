@@ -1,40 +1,48 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Customise {{ $pizza->name }}
+        <h2 class="text-lg font-semibold leading-tight text-gray-800">
+            Customise Pizza: {{ $orderPizza->pizza->name }} ({{ ucfirst($orderPizza->size) }})
         </h2>
     </x-slot>
 
-    <div class="py-6">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white p-6 shadow rounded">
+    <div class="py-6 max-w-3xl mx-auto px-4">
+        <form method="POST" action="{{ route('orders.saveCustomisation', [$order->id, $orderPizza->id]) }}">
+            @csrf
 
-                <form method="POST" action="{{ route('orders.saveCustomisation', [$order, $pizza]) }}">
-                    @csrf
+            <h3 class="mb-4 text-md font-semibold">Toppings</h3>
 
-                    <h3 class="text-lg font-medium mb-4">Select Toppings</h3>
+            @foreach ($availableToppings as $topping)
+                @php
+                    $isSelected = in_array($topping->id, $selectedToppings); // All selected toppings (base or extra)
+                    $isExtra = in_array($topping->id, $extraToppings);       // Only extra ones
+                @endphp
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                        @foreach ($availableToppings as $topping)
-                            <label class="flex items-center space-x-2">
-                                <input 
-                                    type="checkbox" 
-                                    name="toppings[]" 
-                                    value="{{ $topping->id }}"
-                                    class="form-checkbox text-indigo-600"
-                                    {{ in_array($topping->id, $selectedToppings) ? 'checked' : '' }}
-                                >
-                                <span>{{ $topping->name }}</span>
-                            </label>
-                        @endforeach
-                    </div>
+                <div class="flex items-center mb-2">
+                    <input 
+                        type="checkbox" 
+                        name="toppings[]" 
+                        value="{{ $topping->id }}"
+                        id="topping-{{ $topping->id }}"
+                        {{ $isSelected ? 'checked' : '' }}
+                        class="mr-2"
+                    >
+                    <label for="topping-{{ $topping->id }}">
+                        {{ $topping->name }} 
+                        @if ($isExtra)
+                            <span class="text-xs text-gray-500">+85p</span>
+                        @elseif ($isSelected)
+                            <span class="text-xs text-gray-500">(base)</span>
+                        @endif
+                    </label>
+                </div>
+            @endforeach
 
-                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
-                        Save Toppings
-                    </button>
-                </form>
 
+            <div class="mt-6">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Save Toppings
+                </button>
             </div>
-        </div>
+        </form>
     </div>
 </x-app-layout>

@@ -1,31 +1,42 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="text-lg font-semibold leading-tight text-gray-800">
             Add Pizzas to Order #{{ $order->id }}
         </h2>
     </x-slot>
 
-    <div class="py-12 max-w-4xl mx-auto">
-        <form action="{{ route('orders.addPizzas', $order) }}" method="POST" class="space-y-6">
-            @csrf
+    <div class="py-6">
+        <div class="max-w-4xl mx-auto px-4">
+            <form method="POST" action="{{ route('orders.addPizzas', $order) }}">
+                @csrf
 
-            @foreach ($pizzas as $pizza)
-                <div class="border p-4 rounded shadow">
-                    <h3 class="text-lg font-bold">{{ $pizza->name }}</h3>
-                    <p class="text-sm mb-1">{{ $pizza->description }}</p>
-                    <p class="text-sm">
-                        Small £{{ number_format($pizza->small_price, 2) }},
-                        Medium £{{ number_format($pizza->medium_price, 2) }},
-                        Large £{{ number_format($pizza->large_price, 2) }}
-                    </p>
-                    <label for="pizza_{{ $pizza->id }}" class="block mt-2">
-                        Quantity:
-                        <input type="number" min="0" name="pizzas[{{ $pizza->id }}]" id="pizza_{{ $pizza->id }}" class="border rounded px-2 py-1 w-20">
-                    </label>
+                @foreach ($pizzas as $pizza)
+                    <div class="mb-4 border-b pb-4">
+                        <p><strong>{{ $pizza->name }}</strong> — {{ $pizza->description }}</p>
+
+                        <div class="mt-2 space-x-4">
+                            <label>
+                                <input type="radio" name="pizzas[{{ $pizza->id }}][size]" value="small">
+                                Small (£{{ number_format($pizza->small_price, 2) }})
+                            </label>
+                            <label>
+                                <input type="radio" name="pizzas[{{ $pizza->id }}][size]" value="medium">
+                                Medium (£{{ number_format($pizza->medium_price, 2) }})
+                            </label>
+                            <label>
+                                <input type="radio" name="pizzas[{{ $pizza->id }}][size]" value="large">
+                                Large (£{{ number_format($pizza->large_price, 2) }})
+                            </label>
+                        </div>
+                    </div>
+                @endforeach
+
+                <div class="mt-6">
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+                        Add Selected Pizzas
+                    </button>
                 </div>
-            @endforeach
-
-            <x-primary-button>Add to Order</x-primary-button>
-        </form>
+            </form>
+        </div>
     </div>
 </x-app-layout>

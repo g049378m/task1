@@ -27,7 +27,9 @@ class Order extends Model
 
     public function pizzas()
     {
-        return $this->belongsToMany(Pizza::class)->withPivot('quantity')->withTimestamps();
+        return $this->belongsToMany(Pizza::class, 'order_pizzas') 
+                    ->withPivot('size') 
+                    ->withTimestamps();
     }
 
     public function toppings()
@@ -35,6 +37,11 @@ class Order extends Model
         return $this->belongsToMany(Topping::class, 'order_pizza_topping')
                     ->withPivot('pizza_id', 'is_extra')
                     ->withTimestamps();
+    }
+
+    public function orderPizzas()
+    {
+        return $this->hasMany(OrderPizza::class);
     }
 
 }

@@ -9,25 +9,23 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
+    public function up()
 {
-    Schema::create('order_pizza_topping', function (Blueprint $table) {
+    Schema::create('order_pizzas', function (Blueprint $table) {
         $table->id();
         $table->foreignId('order_id')->constrained()->onDelete('cascade');
         $table->foreignId('pizza_id')->constrained()->onDelete('cascade');
-        $table->foreignId('topping_id')->constrained()->onDelete('cascade');
-        $table->unsignedBigInteger('pizza_row_id');
-        $table->boolean('is_extra')->default(false);
+        $table->enum('size', ['small', 'medium', 'large']);
         $table->timestamps();
     });
-    
 }
+
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('order_pizza_topping');
+        Schema::dropIfExists('order_pizzas');
     }
 };
