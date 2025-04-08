@@ -44,8 +44,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/orders/{order}/add-pizzas', [OrderController::class, 'addPizzas'])->name('orders.addPizzas');
     Route::get('/orders/{order}/pizza-row/{orderPizza}/customise', [OrderController::class, 'customisePizzaForm'])->name('orders.customisePizzaForm');
     Route::post('/orders/{order}/pizza-row/{orderPizza}/customise', [OrderController::class, 'saveCustomisation'])->name('orders.saveCustomisation');
-
-    
+    Route::post('/orders/{order}/submit', [OrderController::class, 'submit'])->name('orders.submit');
+    Route::get('/orders/{order}/review', [OrderController::class, 'review'])->name('orders.review');        
 });
 
 require __DIR__.'/auth.php';

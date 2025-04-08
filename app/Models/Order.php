@@ -44,4 +44,18 @@ class Order extends Model
         return $this->hasMany(OrderPizza::class);
     }
 
+    public function submit(Order $order)
+    {
+        $this->authorize('update', $order);
+
+        if ($order->submitted_at) {
+            return redirect()->route('orders.show', $order)->with('info', 'Order has already been submitted.');
+        }
+
+        $order->update(['submitted_at' => now()]);
+
+        return redirect()->route('orders.show', $order)->with('success', 'Order submitted successfully!');
+    }
+
+
 }

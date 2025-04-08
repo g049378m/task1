@@ -64,9 +64,15 @@ class OrderController extends Controller
     public function addPizzasForm(Order $order)
     {
         $this->authorize('update', $order);
+
+        if ($order->submitted_at) {
+            return redirect()->route('orders.show', $order)->with('error', 'You cannot edit a submitted order.');
+        }
+
         $pizzas = Pizza::all();
         return view('orders.add-pizzas', compact('order', 'pizzas'));
     }
+
 
     /**
      * Seçili pizzaları siparişte tutmak icin gerekli fonksiyon
@@ -88,6 +94,10 @@ class OrderController extends Controller
     public function addPizzas(Request $request, Order $order)
     {
         $this->authorize('update', $order);
+
+        if ($order->submitted_at) {
+            return redirect()->route('orders.show', $order)->with('error', 'You cannot edit a submitted order.');
+        }
     
         foreach ($request->input('pizzas', []) as $pizzaId => $data) {
             if (!isset($data['size'])) {
@@ -127,36 +137,55 @@ class OrderController extends Controller
     
 
     public function saveCustomisation(Request $request, Order $order, OrderPizza $orderPizza)
-{
-    $this->authorize('update', $order);
+    {
+        $this->authorize('update', $order);
 
-    \DB::table('order_pizza_topping')
-        ->where('order_id', $order->id)
-        ->where('pizza_id', $orderPizza->pizza_id)
-        ->where('pizza_row_id', $orderPizza->id)
-        ->delete();
-
-    $selectedToppings = $request->input('toppings', []);
-
-    // 🧠 Get original base toppings from the Pizza model
-    $baseToppingIds = $orderPizza->pizza->toppings->pluck('id')->toArray();
-
-    foreach ($selectedToppings as $toppingId) {
-        \DB::table('order_pizza_topping')->insert([
-            'order_id'      => $order->id,
-            'pizza_id'      => $orderPizza->pizza_id,
-            'pizza_row_id'  => $orderPizza->id,
-            'topping_id'    => $toppingId,
-            'is_extra'      => !in_array((int)$toppingId, $baseToppingIds), // ✅ Calculate properly
-            'created_at'    => now(),
-            'updated_at'    => now(),
-        ]);
+    if ($order->submitted_at) {
+        return redirect()->route('orders.show', $order)->with('error', 'You cannot customise a submitted order.');
     }
 
-    $this->recalculateTotal($order);
+        \DB::table('order_pizza_topping')
+            ->where('order_id', $order->id)
+            ->where('pizza_id', $orderPizza->pizza_id)
+            ->where('pizza_row_id', $orderPizza->id)
+            ->delete();
 
-    return redirect()->route('orders.show', $order)->with('success', 'Pizza customisation updated.');
-}
+        $selectedToppings = $request->input('toppings', []);
+
+    
+        $baseToppingIds = $orderPizza->pizza->toppings->pluck('id')->toArray();
+
+        foreach ($selectedToppings as $toppingId) {
+            \DB::table('order_pizza_topping')->insert([
+                'order_id'      => $order->id,
+                'pizza_id'      => $orderPizza->pizza_id,
+                'pizza_row_id'  => $orderPizza->id,
+                'topping_id'    => $toppingId,
+                'is_extra'      => !in_array((int)$toppingId, $baseToppingIds), 
+                'created_at'    => now(),
+                'updated_at'    => now(),
+            ]);
+        }
+
+        $this->recalculateTotal($order);
+
+        return redirect()->route('orders.show', $order)->with('success', 'Pizza customisation updated.');
+    }
+
+    public function review(Order $order)
+    {
+        $this->authorize('view', $order);
+
+        if ($order->orderPizzas->count() === 0) {
+            return redirect()->route('orders.show', $order)->with('error', 'You must add pizzas before reviewing.');
+        }
+
+        return view('orders.review', compact('order'));
+    }
+
+
+
+   
 
     private function recalculateTotal(Order $order)
     {
@@ -166,7 +195,7 @@ class OrderController extends Controller
         foreach ($order->orderPizzas as $orderPizza) {
             $pizza = $orderPizza->pizza;
 
-            // Select correct size price
+            
             $size = $orderPizza->size;
             $basePrice = match ($size) {
                 'small' => $pizza->small_price,
@@ -177,7 +206,7 @@ class OrderController extends Controller
 
             $baseTotal += $basePrice;
 
-            // Count extra toppings for this specific pizza row
+            
             $extraToppings = $orderPizza->toppings->filter(fn($t) => $t->pivot->is_extra)->count();
             $extraToppingCount += $extraToppings;
         }
@@ -186,6 +215,21 @@ class OrderController extends Controller
 
         $order->update(['total' => $total]);
     }
+
+    public function submit(Order $order)
+    {
+        $this->authorize('update', $order);
+
+        if ($order->submitted_at) {
+            return redirect()->route('orders.show', $order)->with('info', 'Order was already submitted.');
+        }
+
+        $order->submitted_at = now();
+        $order->save();
+
+        return redirect()->route('orders.show', $order)->with('success', 'Order successfully submitted!');
+    }
+
 
 
 

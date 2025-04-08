@@ -13,7 +13,7 @@
 
             @foreach ($availableToppings as $topping)
                 @php
-                    $isSelected = in_array($topping->id, $selectedToppings); // All selected toppings (base or extra)
+                    $isSelected = in_array($topping->id, $selectedToppings); // All selected toppings 
                     $isExtra = in_array($topping->id, $extraToppings);       // Only extra ones
                 @endphp
 
