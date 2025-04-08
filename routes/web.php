@@ -30,8 +30,15 @@ Route::get('/toppings', [ToppingController::class, 'index'])->name('toppings.ind
 
 
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    $orders = \App\Models\Order::where('user_id', auth()->id())
+                ->whereNotNull('submitted_at')
+                ->with(['orderPizzas.toppings', 'orderPizzas.pizza'])
+                ->latest()
+                ->get();
+
+    return view('dashboard', compact('orders'));
 })->middleware(['auth', 'verified'])->name('dashboard');
+
 
 Route::middleware('auth')->group(function () {    
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');    
@@ -45,7 +52,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/orders/{order}/pizza-row/{orderPizza}/customise', [OrderController::class, 'customisePizzaForm'])->name('orders.customisePizzaForm');
     Route::post('/orders/{order}/pizza-row/{orderPizza}/customise', [OrderController::class, 'saveCustomisation'])->name('orders.saveCustomisation');
     Route::post('/orders/{order}/submit', [OrderController::class, 'submit'])->name('orders.submit');
-    Route::get('/orders/{order}/review', [OrderController::class, 'review'])->name('orders.review');        
+    Route::get('/orders/{order}/review', [OrderController::class, 'review'])->name('orders.review');
+    Route::post('/orders/{order}/reorder', [OrderController::class, 'reorder'])->name('orders.reorder');
+        
 });
 
 require __DIR__.'/auth.php';

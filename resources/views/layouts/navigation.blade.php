@@ -23,6 +23,9 @@
                         <x-nav-link :href="route('orders.create')" :active="request()->routeIs('orders.create')">
                             {{ __('New Order') }}
                         </x-nav-link>
+                        <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                            {{ __('Previuos Order') }}
+                        </x-nav-link>
                     @endauth
                 </div>
 

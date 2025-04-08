@@ -67,11 +67,11 @@
                 <form action="{{ route('orders.submit', $order) }}" method="POST">
                     @csrf
                     <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                        ✅ Confirm and Submit Order
+                        Confirm and Submit Order
                     </button>
                 </form>
             @else
-                <div class="text-red-600">⚠️ Cannot submit an empty order.</div>
+                <div class="text-red-600"> </div>
             @endif
         </div>
 

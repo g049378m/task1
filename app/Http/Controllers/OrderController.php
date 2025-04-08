@@ -183,6 +183,43 @@ class OrderController extends Controller
         return view('orders.review', compact('order'));
     }
 
+    public function reorder(Request $request, Order $order)
+    {
+        $this->authorize('view', $order);
+    
+        $newOrder = Order::create([
+            'user_id' => auth()->id(),
+            'type' => $order->type,
+            'delivery_charge' => $order->delivery_charge,
+            'total' => 0,
+            'submitted_at' => null, 
+        ]);
+    
+        foreach ($order->orderPizzas as $oldOrderPizza) {
+            $newOrderPizza = OrderPizza::create([
+                'order_id' => $newOrder->id,
+                'pizza_id' => $oldOrderPizza->pizza_id,
+                'size' => $oldOrderPizza->size,
+            ]);
+    
+            foreach ($oldOrderPizza->toppings as $topping) {
+                $newOrderPizza->toppings()->attach($topping->id, [
+                    'order_id'     => $newOrder->id,
+                    'pizza_id'     => $newOrderPizza->pizza_id,
+                    'pizza_row_id' => $newOrderPizza->id,
+                    'is_extra'     => (bool) $topping->pivot->is_extra,
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
+                ]);
+            }
+        }
+    
+        $this->recalculateTotal($newOrder);
+    
+        return redirect()->route('orders.review', $newOrder)->with('success', 'Order duplicated. Please review and submit.');
+    }
+    
+
 
 
    
@@ -227,7 +264,8 @@ class OrderController extends Controller
         $order->submitted_at = now();
         $order->save();
 
-        return redirect()->route('orders.show', $order)->with('success', 'Order successfully submitted!');
+        return redirect()->route('dashboard')->with('success', 'Order submitted successfully!');
+
     }
 
 
